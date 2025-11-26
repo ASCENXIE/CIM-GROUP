@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 module Syn_FIFO #(
     parameter DATA_WIDTH = 512,
-    parameter DEPTH = 256,
+    parameter DEPTH = 64,
     parameter ADDR_WIDTH = $clog2(DEPTH)
 )(
     input  wire                   clk,

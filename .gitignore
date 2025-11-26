@@ -1,3 +1,118 @@
-*.wdb
+# ==============================================================================
+# Python
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+parts/
+bin/
+var/
+wheels/
+pip-wheel-metadata/
+*.whl
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# mypy / pylint / pytest
+.mypy_cache/
+.pytest_cache/
+*.cover
 *.log
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# ==============================================================================
+# Xilinx / Vivado / ISE / Quartus 等 FPGA 工具
+# ==============================================================================
+# 仿真波形 & 临时数据库
+*.wdb
+*.wcfg
+*.sim
+*.dbg
 xsim/
+xcelium/
+vsim/
+modelsim/
+questa/
+incremental_db/
+simv*
+*.fst
+*.vcd
+*.fsdb
+
+# 实现过程文件
+*.bit
+*.mcs
+*.ltx
+*.rpt
+*.bgn
+*.bin
+*.srp
+*.jou
+*.log
+*.zip
+*.tar.gz
+DCP/
+*_synth_*/
+*_impl_*/
+.runs/
+.cache/
+.gen/
+.hw/
+.ip_user_files/
+.remote/
+.strategies/
+
+# Vivado IP 生成文件
+.ipdefs/
+components/
+vivado.jou
+vivado.log
+vivado_*.str
+usage_statistics_webtalk.*
+
+# ==============================================================================
+# IDE & 编辑器
+# ==============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ==============================================================================
+# 操作系统临时文件
+# ==============================================================================
+*.tmp
+*.bak
+*.old
+*.rej
+*.orig
+
+# ==============================================================================
+# 自定义（请按需追加）
+# ==============================================================================
+# 例：本地测试脚本、大数据文件、密钥等
+local_test/
+data/*.csv
+*.key
+*.pem
+secrets/

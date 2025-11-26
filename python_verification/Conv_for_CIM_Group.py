@@ -14,7 +14,7 @@ np.random.seed(86)
 def rand_int8(shape):
     return np.random.randint(-128, 127+1, size=shape, dtype=np.int8)
 
-IH, IW, IC       = 4, 16, 64
+IH, IW, IC       = 64, 48, 64
 KH, KW, KC, KN   = 3, 3, 64, 64
 OH, OW          = IH-KH+1, IW-KW+1        # 2, 14
 
@@ -106,8 +106,8 @@ with open("C:/work_file/grade1/GROUP_RTL_CODE/python_verification/pixel_data_CIM
         for j in range(IW):    # 16 列
             hex_line = int8_to_hex_str(x[i, j, :])  # 64 通道
             f.write("".join(hex_line) + "\n")
-            if(x[i, j, :].any() != 0):
-                print(f"非零输入像素位置: ({i},{j}) 值: {x[i,j,:]}")
+            # if(x[i, j, :].any() != 0):
+            #     print(f"非零输入像素位置: ({i},{j}) 值: {x[i,j,:]}")
 
 # --------------------------------------------------
 # 4.2 保存权重
@@ -123,8 +123,8 @@ with open("C:/work_file/grade1/GROUP_RTL_CODE/python_verification/kernel_weights
                 slice_64 = w[kh, kw, c, :]  # shape=(3,3,64,64)
                 hex_line = int8_to_hex_str(slice_64)
                 f.write("".join(hex_line)+"\n")
-                if(np.any(slice_64 != 0)):
-                    print(f"非零权重位置: (kh={kh},kw={kw},c={c}) 值: {slice_64}")
+                # if(np.any(slice_64 != 0)):
+                #     print(f"非零权重位置: (kh={kh},kw={kw},c={c}) 值: {slice_64}")
 
 print("已生成 feature_hex.txt 与 weight_hex.txt")
 
@@ -145,7 +145,7 @@ with open("C:/work_file/grade1/GROUP_RTL_CODE/python_verification/output_CIM_Gro
     for row in y_2d:
         hex_line = int32_to_hex_str(row)  # 64 个 8 位 hex
         f.write("\n".join(hex_line) + "\n")
-        if(np.any(row != 0)):
-            print(f"非零输出行位置: 值: {row}")
+        # if(np.any(row != 0)):
+        #     print(f"非零输出行位置: 值: {row}")
 
     

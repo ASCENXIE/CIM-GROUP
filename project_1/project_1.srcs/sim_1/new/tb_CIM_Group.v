@@ -33,8 +33,8 @@
 module tb_CIM_Group;
 parameter PERIOD = 4;
 parameter DATA_WIDTH = 512;
-parameter FEATURE_H = 4;
-parameter FEATURE_W = 16;
+parameter FEATURE_H = 64;
+parameter FEATURE_W = 48;
 parameter OH = FEATURE_H - 3 + 1;  
 parameter OW = FEATURE_W - 3 + 1;
 
@@ -68,7 +68,7 @@ wire o_Output_vld;
 reg [25:0] result_group [0:63][0:FEATURE_W-1][0:FEATURE_H-1]; 
 reg [512-1:0] weight_mem [0:575]; 
 
-reg [512-1:0] feature_mem [0:63];
+reg [512-1:0] feature_mem [0:FEATURE_H*FEATURE_W-1];
 
 initial begin
     $readmemh("C:/work_file/grade1/GROUP_RTL_CODE/python_verification/kernel_weights_CIM_Group.txt", weight_mem);
@@ -144,7 +144,7 @@ always @(posedge clk or negedge rst_n) begin
         end
         // input feature data
         i_Is_weight <= 1'b0;
-        for(i = 0; i < 64; i = i + 1) begin
+        for(i = 0; i < FEATURE_H*FEATURE_W; i = i + 1) begin
             i_Lane_data <= feature_mem[i];
             i_Lane_vld <= 1'b1;
             input_done_single_flag <= 1'b0;

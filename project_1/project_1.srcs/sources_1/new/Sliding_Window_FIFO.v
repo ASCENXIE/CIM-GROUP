@@ -32,7 +32,7 @@
 `timescale 1ns/1ps
 module Sliding_Window_FIFO #(
     parameter DATA_WIDTH = 512,
-    parameter DEPTH = 256,
+    parameter DEPTH = 64,
     parameter ADDR_WIDTH = $clog2(DEPTH),
     parameter FIFO_delay = 1
 )(

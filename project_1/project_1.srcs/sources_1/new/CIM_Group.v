@@ -28,8 +28,8 @@
 
 
 module CIM_Group#(
-    parameter DATA_WIDTH = 512
-
+    parameter DATA_WIDTH = 512,
+    parameter WIDTH = 64
 )(
     input                  clk,
     input                  rst_n,
@@ -78,7 +78,7 @@ module CIM_Group#(
 
     Sliding_Window_FIFO #(
         .DATA_WIDTH(512),
-        .DEPTH(256)
+        .DEPTH(WIDTH)          //depth is feature width max value, here set to 64, because synth tool may not support parameter which is too large
     ) u_Sliding_Window_FIFO (
         .clk(clk),
         .rst_n(rst_n),
@@ -117,6 +117,7 @@ module CIM_Group#(
                 current_width_num <= current_width_num + 8'd1;
         end
     end
+
 
     // feature_reg_group update logic
     always @(posedge clk or negedge rst_n) begin
@@ -159,7 +160,6 @@ module CIM_Group#(
                 feature_reg_group[m] <= feature_reg_group[m];
         end
     end
-
     //============================================================
     // 3. CIM Computing
     //============================================================
