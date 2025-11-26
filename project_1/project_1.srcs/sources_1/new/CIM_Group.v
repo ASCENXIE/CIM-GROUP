@@ -35,14 +35,14 @@ module CIM_Group#(
     input                  rst_n,
     // CIM cfg signals
     input wire                  en,
-    input wire [2:0]            i_Cluster_cfg,
-    input wire [2:0]            i_Group_cfg,
-    input wire [2:0]            i_Layer_cfg,
-    input wire [2:0]            i_Kernel_cfg,
-    input wire [1:0]            i_Stride_cfg,
-    input wire [7:0]            i_Feature_Width,
-    input wire                  i_Net_cfg,
-    input wire                  i_cfg_done,
+    input wire [2:0]            i_Cluster_cfg,          // CNN mode: Different cluster will concat; Transformer mode: Q\K\V compute for 512 row compute
+    input wire [2:0]            i_Group_cfg,            // CNN mode: Different group in same cluster will be added; Transformer mode: Q*K^T\Q*V\linear compute for 64 rows compute
+    input wire [2:0]            i_Layer_cfg,            // CNN mode: Different layer; Transformer mode: Different head
+    input wire [2:0]            i_Kernel_cfg,           // CNN mode: Different kernel size, 1:1x1 conv. 3:3x3 conv; Transformer mode: not used
+    input wire [1:0]            i_Stride_cfg,           // CNN mode: Different stride, 0:stride=1;1:stride=2; Transformer mode: not used
+    input wire [7:0]            i_Feature_Width,        // input feature map width
+    input wire                  i_Net_cfg,              // 0:CNN mode; 1:Transformer mode
+    input wire                  i_cfg_done,             // configuration done signal
     // data signals
     input wire                  i_input_done_single_fea,
     input wire [DATA_WIDTH-1:0] i_Lane_data,
@@ -62,8 +62,47 @@ module CIM_Group#(
     //test signals
     output wire [64*26-1:0]     cim_result
     );
-
     integer m;
+    //============================================================
+    // 0. Config Registers configuration
+    // ===========================================================
+    reg [2:0] r_Cluster_cfg;
+    reg [2:0] r_Group_cfg;
+    reg [2:0] r_Layer_cfg;
+    reg [2:0] r_Kernel_cfg;
+    reg [1:0] r_Stride_cfg;
+    reg [7:0] r_Feature_Width;
+    reg       r_Net_cfg;
+    always @(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            r_Cluster_cfg <= 3'b0;
+            r_Group_cfg   <= 3'b0;
+            r_Layer_cfg   <= 3'b0;
+            r_Kernel_cfg  <= 3'b0;
+            r_Stride_cfg  <= 2'b0;
+            r_Feature_Width <= 8'b0;
+            r_Net_cfg     <= 1'b0;
+        end
+        else if(i_cfg_done) begin
+            r_Cluster_cfg <= i_Cluster_cfg;
+            r_Group_cfg   <= i_Group_cfg;
+            r_Layer_cfg   <= i_Layer_cfg;
+            r_Kernel_cfg  <= i_Kernel_cfg;
+            r_Stride_cfg  <= i_Stride_cfg;
+            r_Feature_Width <= i_Feature_Width;
+            r_Net_cfg     <= i_Net_cfg;
+        end
+        else begin
+            r_Cluster_cfg <= r_Cluster_cfg;
+            r_Group_cfg   <= r_Group_cfg;
+            r_Layer_cfg   <= r_Layer_cfg;
+            r_Kernel_cfg  <= r_Kernel_cfg;
+            r_Stride_cfg  <= r_Stride_cfg;
+            r_Feature_Width <= r_Feature_Width;
+            r_Net_cfg     <= r_Net_cfg;
+        end
+    end
+
     //============================================================
     // 1. Sliding Window FIFO
     //============================================================
@@ -85,7 +124,7 @@ module CIM_Group#(
         .input_done_single_fea(i_input_done_single_fea),
         .din(fifo_feature_din),
         .din_valid(feature_din_valid),
-        .feature_width(i_Feature_Width),
+        .feature_width(r_Feature_Width),
         .dout(fifo_feature_dout),           //fifo_feature_dout = {data2, data1, data0} highest is data2
         .dout_valid(fifo_feature_dout_valid)
     );
@@ -93,134 +132,151 @@ module CIM_Group#(
     //============================================================
     // 2. REG for feature
     //============================================================
-    reg [7:0] feature_reg_group [0:575];
-    reg [7:0] feature_width_reg;
-    reg [7:0] current_width_num;
-    //reg feature_reg_group_valid;
-    reg  [3:0]     cim_input_cnt;
-    // record feature_width
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n)
-            feature_width_reg <= 8'd0;
-        else if (en)
-            feature_width_reg <= i_Feature_Width;
-    end
+    // reg [7:0] feature_reg_group [0:575];
+    // reg [7:0] current_width_num;
+    // //reg feature_reg_group_valid;
+    // reg  [3:0]     cim_input_cnt;
 
-    // current_width_num logic
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n)
-            current_width_num <= 8'd0;
-        else if (fifo_feature_dout_valid) begin
-            if (current_width_num == feature_width_reg - 1)
-                current_width_num <= 8'd0;
-            else
-                current_width_num <= current_width_num + 8'd1;
-        end
-    end
+    // // current_width_num logic
+    // always @(posedge clk or negedge rst_n) begin
+    //     if (!rst_n)
+    //         current_width_num <= 8'd0;
+    //     else if (fifo_feature_dout_valid) begin
+    //         if (current_width_num == r_Feature_Width - 1)
+    //             current_width_num <= 8'd0;
+    //         else
+    //             current_width_num <= current_width_num + 8'd1;
+    //     end
+    // end
 
 
-    // feature_reg_group update logic
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            for (m = 0; m < 576; m = m + 1)
-                feature_reg_group[m] <= 8'b0;
-                //feature_reg_group_valid <= 1'b0;
-        end
-        else if (fifo_feature_dout_valid && (cim_input_cnt == 4'b0 || cim_input_cnt == 4'b1)) begin    //FIFO output valid and CIM is ready to take new input
-            if (current_width_num == 8'd0) begin
-                // first valid fifo output → [0:191]
-                for (m = 0; m < 192; m = m + 1)
-                    feature_reg_group[m] <= fifo_feature_dout[(1535-m*8) -: 8];
-                //feature_reg_group_valid <= 1'b0;
-            end
-            else if (current_width_num == 8'd1) begin
-                // second valid fifo output → [192:383]
-                for (m = 0; m < 192; m = m + 1)
-                    feature_reg_group[192 + m] <= fifo_feature_dout[(1535-m*8) -: 8];
-                //feature_reg_group_valid <= 1'b0;
-            end
-            else if (current_width_num == 8'd2) begin
-                // third valid fifo output → [384:575]
-                for (m = 0; m < 192; m = m + 1)
-                    feature_reg_group[384 + m] <= fifo_feature_dout[(1535-m*8) -: 8];
-                //feature_reg_group_valid <= 1'b1;
-            end
-            else begin
-                // update [0:191], and shift the rest
-                for (m = 0; m < 384; m = m + 1)
-                    feature_reg_group[m] <= feature_reg_group[m+192];
-                for (m = 0; m < 192; m = m + 1)
-                    feature_reg_group[m + 384] <= fifo_feature_dout[(1535-m*8) -: 8];
-                //feature_reg_group_valid <= 1'b1;
-            end
-        end
-        else begin
-            //feature_reg_group_valid <= 1'b0;
-            for(m = 0; m < 576; m = m + 1)
-                feature_reg_group[m] <= feature_reg_group[m];
-        end
-    end
+    // // feature_reg_group update logic
+    // always @(posedge clk or negedge rst_n) begin
+    //     if (!rst_n) begin
+    //         for (m = 0; m < 576; m = m + 1)
+    //             feature_reg_group[m] <= 8'b0;
+    //             //feature_reg_group_valid <= 1'b0;
+    //     end
+    //     else if (fifo_feature_dout_valid && (cim_input_cnt == 4'b0 || cim_input_cnt == 4'b1)) begin    //FIFO output valid and CIM is ready to take new input
+    //         if (current_width_num == 8'd0) begin
+    //             // first valid fifo output → [0:191]
+    //             for (m = 0; m < 192; m = m + 1)
+    //                 feature_reg_group[m] <= fifo_feature_dout[(1535-m*8) -: 8];
+    //             //feature_reg_group_valid <= 1'b0;
+    //         end
+    //         else if (current_width_num == 8'd1) begin
+    //             // second valid fifo output → [192:383]
+    //             for (m = 0; m < 192; m = m + 1)
+    //                 feature_reg_group[192 + m] <= fifo_feature_dout[(1535-m*8) -: 8];
+    //             //feature_reg_group_valid <= 1'b0;
+    //         end
+    //         else if (current_width_num == 8'd2) begin
+    //             // third valid fifo output → [384:575]
+    //             for (m = 0; m < 192; m = m + 1)
+    //                 feature_reg_group[384 + m] <= fifo_feature_dout[(1535-m*8) -: 8];
+    //             //feature_reg_group_valid <= 1'b1;
+    //         end
+    //         else begin
+    //             // update [0:191], and shift the rest
+    //             for (m = 0; m < 384; m = m + 1)
+    //                 feature_reg_group[m] <= feature_reg_group[m+192];
+    //             for (m = 0; m < 192; m = m + 1)
+    //                 feature_reg_group[m + 384] <= fifo_feature_dout[(1535-m*8) -: 8];
+    //             //feature_reg_group_valid <= 1'b1;
+    //         end
+    //     end
+    //     else begin
+    //         //feature_reg_group_valid <= 1'b0;
+    //         for(m = 0; m < 576; m = m + 1)
+    //             feature_reg_group[m] <= feature_reg_group[m];
+    //     end
+    // end
+    // //============================================================
+    // // 3. CIM Computing
+    // //============================================================
+    // reg  [576-1:0] feature_din;
+    // reg            cimen;
+    // wire           cim_result_ready;
+
+    // // weight input logic
+    // wire [512-1:0] weight_din;
+    // reg  [9:0]     weight_addr;
+    // assign weight_din = i_Lane_data[512-1:0];
+    // always@(posedge clk or negedge rst_n) begin
+    //     if(!rst_n) begin
+    //         weight_addr <= 10'd0;
+    //     end
+    //     else if(i_Is_weight && weight_addr < 10'd575) begin
+    //         weight_addr <= weight_addr + 10'd1;
+    //     end
+    //     else begin
+    //         weight_addr <= weight_addr;
+    //     end
+    // end
+
+    // // feature_in assignment logic
+    // always@(posedge clk or negedge rst_n) begin
+    //     if(!rst_n) begin
+    //         cim_input_cnt <= 4'b0;
+    //         cimen <= 1'b0;
+    //     end
+    //     else if(current_width_num >= 8'd2 && fifo_feature_dout_valid 
+    //             && (cim_input_cnt == 4'b0 || cim_input_cnt == 4'b1)) begin
+    //         if(cimen == 1'b0)
+    //             cim_input_cnt <= 4'd7;
+    //         else if(cimen == 1'b1)
+    //             cim_input_cnt <= 4'd7;
+    //         cimen <= 1'b1;
+    //     end        
+    //     else begin
+    //         if(cim_input_cnt > 4'd0) begin
+    //             cim_input_cnt <= cim_input_cnt - 1 ;
+    //             cimen <= 1'b1;
+    //         end            
+    //         else begin
+    //             cimen <= 1'b0;
+    //             cim_input_cnt <= 4'b0; 
+    //         end
+    //     end
+    // end
+
+    // always@(*) begin
+    //     for(m = 0; m < 576; m = m + 1) begin
+    //         if(cim_input_cnt >= 0)
+    //             feature_din[m] = feature_reg_group[m][4'd7-cim_input_cnt];  //input from least significant bit
+    //         // else if(cim_input_cnt == 0)
+    //         //     feature_din[m] = feature_reg_group[m][4'd0];
+    //         else 
+    //             feature_din[m] = feature_reg_group[m][4'd0];
+    //     end
+    // end
+
+    // ============================================================
+    // 2. REG for feature
+    // ===========================================================
+    wire  [576-1:0]    feature_din;
+    wire               cimen;
+    wire  [9:0]        weight_addr;
+
+    Group_Ping_Pong_REG u_Group_Ping_Pong_REG (
+        .clk(clk),
+        .rst_n(rst_n),
+        .fifo_feature_dout(fifo_feature_dout),
+        .fifo_feature_dout_valid(fifo_feature_dout_valid),
+        .r_Feature_Width(r_Feature_Width),
+        .i_Is_weight(i_Is_weight),
+        .i_Lane_data(i_Lane_data),
+        .weight_addr(weight_addr),
+        .feature_din(feature_din),
+        .cimen(cimen)
+    );
     //============================================================
-    // 3. CIM Computing
+    // 3. CIM instance
     //============================================================
-    reg  [576-1:0] feature_din;
-    reg            cimen;
-    wire           cim_result_ready;
+    wire  [512-1:0]          weight_din;
+    wire                     cim_result_ready;
 
-    // weight input logic
-    wire [512-1:0] weight_din;
-    reg  [9:0]     weight_addr;
-    assign weight_din = i_Lane_data[512-1:0];
-    always@(posedge clk or negedge rst_n) begin
-        if(!rst_n) begin
-            weight_addr <= 10'd0;
-        end
-        else if(i_Is_weight && weight_addr < 10'd575) begin
-            weight_addr <= weight_addr + 10'd1;
-        end
-        else begin
-            weight_addr <= weight_addr;
-        end
-    end
-
-    // feature_in assignment logic
-    always@(posedge clk or negedge rst_n) begin
-        if(!rst_n) begin
-            cim_input_cnt <= 4'b0;
-            cimen <= 1'b0;
-        end
-        else if(current_width_num >= 8'd2 && fifo_feature_dout_valid 
-                && (cim_input_cnt == 4'b0 || cim_input_cnt == 4'b1)) begin
-            if(cimen == 1'b0)
-                cim_input_cnt <= 4'd7;
-            else if(cimen == 1'b1)
-                cim_input_cnt <= 4'd7;
-            cimen <= 1'b1;
-        end        
-        else begin
-            if(cim_input_cnt > 4'd0) begin
-                cim_input_cnt <= cim_input_cnt - 1 ;
-                cimen <= 1'b1;
-            end            
-            else begin
-                cimen <= 1'b0;
-                cim_input_cnt <= 4'b0; 
-            end
-        end
-    end
-
-    always@(*) begin
-        for(m = 0; m < 576; m = m + 1) begin
-            if(cim_input_cnt >= 0)
-                feature_din[m] = feature_reg_group[m][4'd7-cim_input_cnt];  //input from least significant bit
-            // else if(cim_input_cnt == 0)
-            //     feature_din[m] = feature_reg_group[m][4'd0];
-            else 
-                feature_din[m] = feature_reg_group[m][4'd0];
-        end
-    end
-
-
+    assign weight_din = i_Is_weight ? i_Lane_data[512-1:0] : 512'b0;
     CIM_576X64 u_CIM_576X64 (
         .clk(clk),
         .rst_n(rst_n),
@@ -237,6 +293,7 @@ module CIM_Group#(
     //============================================================
     // 4. Quantization
     //============================================================
+
     Quantization_Group u_Quantization_Group (
         .clk(clk),
         .rst_n(rst_n),

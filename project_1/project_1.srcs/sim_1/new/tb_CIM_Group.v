@@ -33,8 +33,8 @@
 module tb_CIM_Group;
 parameter PERIOD = 4;
 parameter DATA_WIDTH = 512;
-parameter FEATURE_H = 64;
-parameter FEATURE_W = 48;
+parameter FEATURE_H = 4;
+parameter FEATURE_W = 16;
 parameter OH = FEATURE_H - 3 + 1;  
 parameter OW = FEATURE_W - 3 + 1;
 
@@ -104,6 +104,8 @@ CIM_Group u_CIM_Group (
     .i_Kernel_cfg    (3'd0                      ),
     .i_Stride_cfg    (2'd0                      ),
     .i_Feature_Width   (i_Feature_width_cfg   ),
+    .i_Net_cfg       (1'b0                      ),
+    .i_cfg_done     (1'b1                      ),
     .i_input_done_single_fea (input_done_single_flag  ),
     .i_Lane_data      (i_Lane_data                ),
     .i_Lane_data_vld  (i_Lane_vld                 ),     

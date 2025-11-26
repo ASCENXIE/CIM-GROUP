@@ -1,5 +1,0 @@
-Time resolution is 1 ps
->>> result_group.txt write done.
-$finish called at time : 102242 ns : File "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v" Line 222
-$finish called at time : 106258 ns : File "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v" Line 166
-INFO: xsimkernel Simulation Memory Usage: 42376 KB (Peak: 42376 KB), Simulation CPU Usage: 284468 ms

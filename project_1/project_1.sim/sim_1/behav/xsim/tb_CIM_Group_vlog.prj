@@ -4,6 +4,7 @@ verilog xil_defaultlib  --include "../../../../project_1.srcs/sources_1/new" \
 "../../../../project_1.srcs/sources_1/new/CIMD64X64NR.v" \
 "../../../../project_1.srcs/sources_1/new/CIM_576X64.v" \
 "../../../../project_1.srcs/sources_1/new/CIM_Group.v" \
+"../../../../project_1.srcs/sources_1/new/Group_Ping_Pong_REG.v" \
 "../../../../project_1.srcs/sources_1/new/Quantization_Group.v" \
 "../../../../project_1.srcs/sources_1/new/Sliding_Window_FIFO.v" \
 "../../../../project_1.srcs/sources_1/new/Syn_FIFO.v" \

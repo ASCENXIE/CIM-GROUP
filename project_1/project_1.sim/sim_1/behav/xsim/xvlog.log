@@ -6,6 +6,8 @@ INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/
 INFO: [VRFC 10-311] analyzing module CIM_576X64
 INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/CIM_Group.v" into library xil_defaultlib
 INFO: [VRFC 10-311] analyzing module CIM_Group
+INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/Group_Ping_Pong_REG.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module Group_Ping_Pong_REG
 INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/Quantization_Group.v" into library xil_defaultlib
 INFO: [VRFC 10-311] analyzing module Quantization_Group
 INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/Sliding_Window_FIFO.v" into library xil_defaultlib
@@ -28,6 +30,6 @@ INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/
 INFO: [VRFC 10-311] analyzing module cimd_repair_en_64
 INFO: [VRFC 10-2263] Analyzing Verilog file "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v" into library xil_defaultlib
 INFO: [VRFC 10-311] analyzing module tb_CIM_Group
-INFO: [VRFC 10-2458] undeclared symbol o_Cluster_num, assumed default net type wire [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:116]
-INFO: [VRFC 10-2458] undeclared symbol o_Group_num, assumed default net type wire [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:117]
-INFO: [VRFC 10-2458] undeclared symbol o_Layer_num, assumed default net type wire [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:118]
+INFO: [VRFC 10-2458] undeclared symbol o_Cluster_num, assumed default net type wire [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:118]
+INFO: [VRFC 10-2458] undeclared symbol o_Group_num, assumed default net type wire [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:119]
+INFO: [VRFC 10-2458] undeclared symbol o_Layer_num, assumed default net type wire [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:120]

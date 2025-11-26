@@ -14,7 +14,7 @@ np.random.seed(86)
 def rand_int8(shape):
     return np.random.randint(-128, 127+1, size=shape, dtype=np.int8)
 
-IH, IW, IC       = 64, 48, 64
+IH, IW, IC       = 4, 16, 64
 KH, KW, KC, KN   = 3, 3, 64, 64
 OH, OW          = IH-KH+1, IW-KW+1        # 2, 14
 

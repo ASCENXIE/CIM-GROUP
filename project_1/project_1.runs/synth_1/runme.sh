@@ -40,4 +40,4 @@ EAStep()
      fi
 }
 
-EAStep vivado -log Sliding_Window_FIFO.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source Sliding_Window_FIFO.tcl
+EAStep vivado -log CIM_576X64.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source CIM_576X64.tcl
