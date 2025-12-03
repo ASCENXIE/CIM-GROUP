@@ -68,6 +68,7 @@ simv*
 *.log
 *.zip
 *.tar.gz
+*.dcp
 DCP/
 *_synth_*/
 *_impl_*/
@@ -115,4 +116,4 @@ local_test/
 data/*.csv
 *.key
 *.pem
-secrets/
+project_1/project_1.runs/synth_1/*.dcp
