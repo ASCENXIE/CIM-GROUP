@@ -38,12 +38,13 @@ module Sliding_Window_FIFO #(
 )(
     input  wire                   clk,
     input  wire                   rst_n,
+    input  wire                   en,
     input  wire                   input_done_single_fea, // indicate the last row of feature map has been input
     // input data and control
     input  wire [DATA_WIDTH-1:0]  din,
     input  wire                   din_valid,
     input  wire [ADDR_WIDTH-1:0]  feature_width, // feature width for sliding window
-
+    input  wire [1:0]             stride_cfg, // stride configuration
     // output sliding window
     output reg  [DATA_WIDTH*3-1:0] dout,   // concat output FIFO2 | FIFO1 | FIFO0
     output reg                     dout_valid,
@@ -98,26 +99,48 @@ module Sliding_Window_FIFO #(
     // ============================================================
     // control logic
     // ============================================================
+    reg fifo_output_cnt_done;
     always@(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             rd_en0_d1 <= 1'b0;
             rd_en1_d1 <= 1'b0;
             rd_en2_d1 <= 1'b0;
         end
-        else begin
+        else if(en)  begin
             rd_en0_d1 <= rd_en0;
             rd_en1_d1 <= rd_en1;
             rd_en2_d1 <= rd_en2;
         end
     end
-
+    // using fifo_output_cnt to ensure that after input_done_single_fea, every 8 clock cycles output data once, because CIM can complete one 3x3 computation in 8 clock cycles 
     always@(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             fifo_output_cnt <= 3'd0;
         end
-        else begin
+        else if(en) begin
             if(input_done_single_fea_reg) begin
-                fifo_output_cnt <= fifo_output_cnt + 3'd1;
+                if(stride_cfg == 2'b00) // stride=1
+                    if(fifo_output_cnt == 3'd7) begin
+                        fifo_output_cnt <= 3'd0;
+                        fifo_output_cnt_done <= 1'b1;
+                    end
+                    else begin
+                        fifo_output_cnt <= fifo_output_cnt + 3'd1;
+                        fifo_output_cnt_done <= 1'b0;
+                    end
+                else if(stride_cfg == 2'b01) begin // stride=2
+                    if(fifo_output_cnt == 3'd3) begin     //motify
+                        fifo_output_cnt <= 3'd0;
+                        fifo_output_cnt_done <= 1'b1;
+                    end
+                    else begin
+                        fifo_output_cnt <= fifo_output_cnt + 3'd1;
+                        fifo_output_cnt_done <= 1'b0;
+                    end
+                end
+                else begin
+                    fifo_output_cnt <= 3'd0;
+                end
             end
             else begin
                 fifo_output_cnt <= 3'd0;
@@ -126,11 +149,14 @@ module Sliding_Window_FIFO #(
     end
 
     always@(*) begin 
-        if(input_done_single_fea_reg) begin 
+        if(input_done_single_fea_reg && en) begin 
             if(!fifo_empty2) begin 
-                rd_en0 = &fifo_output_cnt ? 1'b1 : 1'b0; 
-                rd_en1 = &fifo_output_cnt ? 1'b1 : 1'b0;
-                rd_en2 = &fifo_output_cnt ? 1'b1 : 1'b0;
+                // rd_en0 = &fifo_output_cnt ? 1'b1 : 1'b0; 
+                // rd_en1 = &fifo_output_cnt ? 1'b1 : 1'b0;
+                // rd_en2 = &fifo_output_cnt ? 1'b1 : 1'b0;
+                rd_en0 = fifo_output_cnt_done ? 1'b1 : 1'b0; 
+                rd_en1 = fifo_output_cnt_done ? 1'b1 : 1'b0;
+                rd_en2 = fifo_output_cnt_done ? 1'b1 : 1'b0;
                 wr_en0 = din_valid && !fifo_full0; 
                 wr_en1 = 1'b0;
                 wr_en2 = 1'b0; 
@@ -161,7 +187,7 @@ module Sliding_Window_FIFO #(
         if(!rst_n) begin
             input_done_single_fea_reg <= 1'b0;
         end
-        else begin
+        else if(en) begin
             if(input_done_single_fea)
                 input_done_single_fea_reg <= input_done_single_fea;
             else if(fifo_empty2)
@@ -181,7 +207,7 @@ module Sliding_Window_FIFO #(
             fifo0_ready <= 1'b0;
             fifo1_ready <= 1'b0;
             fifo2_ready <= 1'b0;
-        end else if(input_done_single_fea_reg) begin
+        end else if(input_done_single_fea_reg && en) begin
             fifo0_ready <= 1'b1;
             fifo1_ready <= 1'b1;
             fifo2_ready <= 1'b1;
@@ -212,7 +238,7 @@ module Sliding_Window_FIFO #(
         if (!rst_n) begin
             dout <= 'b0;
             dout_valid <= 1'b0;
-        end else if (fifo0_ready && fifo1_ready && fifo2_ready && ((output_vld0&&output_vld1&&output_vld2) || (output_vld0_d2&&output_vld1_d1&&output_vld2))) begin
+        end else if ( en && fifo0_ready && fifo1_ready && fifo2_ready && ((output_vld0&&output_vld1&&output_vld2) || (output_vld0_d2&&output_vld1_d1&&output_vld2))) begin
             dout <= {fifo_dout2, fifo_dout1, fifo_dout0};
             dout_valid <= 1'b1;
         end else begin

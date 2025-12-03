@@ -13,8 +13,6 @@
 // The MEB controls the storage function, equivalent to the read signal, WEB is equivalent to the write signal, 
 // and pulling CIMEN high represents enabling computation. Since there is no need to use the readout function, meb is kept low.
 //When writing weights, lower the web first, then write weights according to the position.
-//这是CIM计算模块，由�??�??512CIM和一�??64CIM组成，meb控制存储功能，等效于读出信号，web等效于写入信号，cimen拉高代表使能计算,
-//由于无需使用读出功能，因此保持meb为低.在写入权重时，拉低web，之后根据位置写入权�??
 //
 // Dependencies: 
 // 
@@ -27,27 +25,32 @@
 
 module Tile_576X8(
     input                   clk,
+    input                   rst_n,
+    input   [1:0]           compute_mode,       //00:CNN 3x3, 576; 01:CNN 1x1, 64; 11:Transformer, 64+512 
     input                   meb,                //macro enable,active low
     input                   web,                //write enable,active low
     input                   cimen,              ////0:MEM mode,1:CIM mode
-    input   [575:0]         feature_din,
+    input                   cimen_512,
+    input   [63:0]          feature_din_64,
+    input   [511:0]         feature_din_512,
     input   [63:0]          weight_din,
     input   [9:0]           weight_addr,
-    input                   rst_n,
     output  [26*8-1:0]      result_data,
-    output                  result_ready
+    output  [26*8-1:0]      result_512,
+    output                  result_ready,
+    output                  result_ready_512
     );
 
 // === Feature Input Split ===
-    wire [63:0]  din_64  = !web ?  weight_din:feature_din[63:0];   //beacause 64 CIM's weight input and feature input have same port
-    wire [511:0] din_512 = feature_din[575:64];
+    wire [63:0]  din_64  = !web ?  weight_din:feature_din_64;   //beacause 64 CIM's weight input and feature input have same port
+    wire [511:0] din_512 = feature_din_512;
 
     // === Weight Address Decode ===
     wire sel_64  = (weight_addr < 10'd64);    // select 64CIM
     wire sel_512 = (weight_addr >= 10'd64);   // select 512CIM
 
     // local address inside each CIM
-    wire [5:0]  addr_64  = weight_addr[5:0];               // 0~63
+    wire [5:0]  addr_64  = weight_addr > 10'd63 ? 6'd63 : weight_addr[5:0];               // 0~63
     wire [8:0]  addr_512 = weight_addr - 10'd64;           // 0~511
 
     // === Write Enable Decode ===
@@ -56,8 +59,8 @@ module Tile_576X8(
 
     // === Result Wires ===
     wire [22*8-1:0] result_64;
-    wire [25*8-1:0] result_512;
-    wire result_ready_64, result_ready_512;
+    wire [26*8-1:0] result_576;
+    wire result_ready_64;
     
  CIMD64X64NR #(
     .ROW_NUM(64), 
@@ -83,7 +86,7 @@ CIMD512X64NR #(
     .MAC_WID 	(25   ))
 u_CIMD512X64NR(
     .CLK   	(clk                       ),
-    .MEB   	(meb                       ),
+    .MEB   	(meb && compute_mode!=2'b01                       ),    // disable 512 CIM when compute_mode is 01
     .WEB   	(web_512                   ),
     .CIMEN 	(cimen                     ),
     .NNIN  	(din_512                   ),
@@ -106,7 +109,7 @@ generate
 endgenerate
 
     // === Pack summed outputs ===
-    assign result_data = {
+    assign result_576 = {
         sum_result[7],
         sum_result[6],
         sum_result[5],
@@ -117,6 +120,8 @@ endgenerate
         sum_result[0]
     };
 
-    assign result_ready = result_ready_512 & result_ready_64;
+    assign result_ready = compute_mode == 2'b00 ? (result_ready_512 & result_ready_64) : result_ready_64;
+    assign result_data = compute_mode == 2'b00 ? result_576 : result_64;
+
 
 endmodule

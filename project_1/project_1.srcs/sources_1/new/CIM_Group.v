@@ -35,8 +35,8 @@ module CIM_Group#(
     input                  rst_n,
     // CIM cfg signals
     input wire                  en,
-    input wire [2:0]            i_Cluster_cfg,          // CNN mode: Different cluster will concat; Transformer mode: Q\K\V compute for 512 row compute
-    input wire [2:0]            i_Group_cfg,            // CNN mode: Different group in same cluster will be added; Transformer mode: Q*K^T\Q*V\linear compute for 64 rows compute
+    input wire [2:0]            i_Cluster_cfg,          // CNN mode: Different cluster will concat; Transformer mode: Q\K\V\Linear compute for 512 row compute, Disable: 000, Q: 001, K: 010, V: 011, Linear: 100  
+    input wire [2:0]            i_Group_cfg,            // CNN mode: Different group in same cluster will be added; Transformer mode: Q*K^T\Q*V\linear compute for 64 rows compute, Disable: 000, Q*K^T: 001, Q*V: 010, Linear: 011
     input wire [2:0]            i_Layer_cfg,            // CNN mode: Different layer; Transformer mode: Different head
     input wire [2:0]            i_Kernel_cfg,           // CNN mode: Different kernel size, 1:1x1 conv. 3:3x3 conv; Transformer mode: not used
     input wire [1:0]            i_Stride_cfg,           // CNN mode: Different stride, 0:stride=1;1:stride=2; Transformer mode: not used
@@ -46,7 +46,8 @@ module CIM_Group#(
     // data signals
     input wire                  i_input_done_single_fea,
     input wire [DATA_WIDTH-1:0] i_Lane_data,
-    input wire                  i_Lane_data_vld,
+    input wire [9:0]            i_Lane_data_addr,       // because Lane_data may be weight or feature, if weight addr is needed, address should be provided by input router or output router
+    input wire                  i_Lane_data_vld,        // when i_Lane_data is valid for Group, set this signal to 1
     input wire [2:0]            i_Cluster_num,
     input wire [2:0]            i_Group_num,
     input wire [2:0]            i_Layer_num,
@@ -60,7 +61,9 @@ module CIM_Group#(
     output reg [2:0]            o_Group_num,
     output reg [2:0]            o_Layer_num,
     //test signals
-    output wire [64*26-1:0]     cim_result
+    output wire [64*26-1:0]     cim_result,
+    output wire [64*26-1:0]     cim_result_512,
+    output wire                  cim_result_ready_512
     );
     integer m;
     //============================================================
@@ -111,20 +114,26 @@ module CIM_Group#(
     wire feature_din_valid;
     wire [DATA_WIDTH*3-1:0] fifo_feature_dout;
     wire fifo_feature_dout_valid;
-    
+    wire fifo_en;
+
+    assign fifo_en = en && (!i_Is_weight) && r_Kernel_cfg == 3'd3 ; 
     assign fifo_feature_din = i_Lane_data;
     assign feature_din_valid = i_Lane_data_vld && (!i_Is_weight); 
 
+    //FIFO is used for feature sliding window, it's only used when conv is 3x3 and stride is 1 or 2
+    //FIFO will cost a lot of resource when feature width is large, it needs to be optimized for larger feature width and higher reuse
     Sliding_Window_FIFO #(
         .DATA_WIDTH(512),
         .DEPTH(WIDTH)          //depth is feature width max value, here set to 64, because synth tool may not support parameter which is too large
     ) u_Sliding_Window_FIFO (
         .clk(clk),
         .rst_n(rst_n),
+        .en(fifo_en),
         .input_done_single_fea(i_input_done_single_fea),
         .din(fifo_feature_din),
         .din_valid(feature_din_valid),
         .feature_width(r_Feature_Width),
+        .stride_cfg(r_Stride_cfg),
         .dout(fifo_feature_dout),           //fifo_feature_dout = {data2, data1, data0} highest is data2
         .dout_valid(fifo_feature_dout_valid)
     );
@@ -132,162 +141,74 @@ module CIM_Group#(
     //============================================================
     // 2. REG for feature
     //============================================================
-    // reg [7:0] feature_reg_group [0:575];
-    // reg [7:0] current_width_num;
-    // //reg feature_reg_group_valid;
-    // reg  [3:0]     cim_input_cnt;
-
-    // // current_width_num logic
-    // always @(posedge clk or negedge rst_n) begin
-    //     if (!rst_n)
-    //         current_width_num <= 8'd0;
-    //     else if (fifo_feature_dout_valid) begin
-    //         if (current_width_num == r_Feature_Width - 1)
-    //             current_width_num <= 8'd0;
-    //         else
-    //             current_width_num <= current_width_num + 8'd1;
-    //     end
-    // end
-
-
-    // // feature_reg_group update logic
-    // always @(posedge clk or negedge rst_n) begin
-    //     if (!rst_n) begin
-    //         for (m = 0; m < 576; m = m + 1)
-    //             feature_reg_group[m] <= 8'b0;
-    //             //feature_reg_group_valid <= 1'b0;
-    //     end
-    //     else if (fifo_feature_dout_valid && (cim_input_cnt == 4'b0 || cim_input_cnt == 4'b1)) begin    //FIFO output valid and CIM is ready to take new input
-    //         if (current_width_num == 8'd0) begin
-    //             // first valid fifo output → [0:191]
-    //             for (m = 0; m < 192; m = m + 1)
-    //                 feature_reg_group[m] <= fifo_feature_dout[(1535-m*8) -: 8];
-    //             //feature_reg_group_valid <= 1'b0;
-    //         end
-    //         else if (current_width_num == 8'd1) begin
-    //             // second valid fifo output → [192:383]
-    //             for (m = 0; m < 192; m = m + 1)
-    //                 feature_reg_group[192 + m] <= fifo_feature_dout[(1535-m*8) -: 8];
-    //             //feature_reg_group_valid <= 1'b0;
-    //         end
-    //         else if (current_width_num == 8'd2) begin
-    //             // third valid fifo output → [384:575]
-    //             for (m = 0; m < 192; m = m + 1)
-    //                 feature_reg_group[384 + m] <= fifo_feature_dout[(1535-m*8) -: 8];
-    //             //feature_reg_group_valid <= 1'b1;
-    //         end
-    //         else begin
-    //             // update [0:191], and shift the rest
-    //             for (m = 0; m < 384; m = m + 1)
-    //                 feature_reg_group[m] <= feature_reg_group[m+192];
-    //             for (m = 0; m < 192; m = m + 1)
-    //                 feature_reg_group[m + 384] <= fifo_feature_dout[(1535-m*8) -: 8];
-    //             //feature_reg_group_valid <= 1'b1;
-    //         end
-    //     end
-    //     else begin
-    //         //feature_reg_group_valid <= 1'b0;
-    //         for(m = 0; m < 576; m = m + 1)
-    //             feature_reg_group[m] <= feature_reg_group[m];
-    //     end
-    // end
-    // //============================================================
-    // // 3. CIM Computing
-    // //============================================================
-    // reg  [576-1:0] feature_din;
-    // reg            cimen;
-    // wire           cim_result_ready;
-
-    // // weight input logic
-    // wire [512-1:0] weight_din;
-    // reg  [9:0]     weight_addr;
-    // assign weight_din = i_Lane_data[512-1:0];
-    // always@(posedge clk or negedge rst_n) begin
-    //     if(!rst_n) begin
-    //         weight_addr <= 10'd0;
-    //     end
-    //     else if(i_Is_weight && weight_addr < 10'd575) begin
-    //         weight_addr <= weight_addr + 10'd1;
-    //     end
-    //     else begin
-    //         weight_addr <= weight_addr;
-    //     end
-    // end
-
-    // // feature_in assignment logic
-    // always@(posedge clk or negedge rst_n) begin
-    //     if(!rst_n) begin
-    //         cim_input_cnt <= 4'b0;
-    //         cimen <= 1'b0;
-    //     end
-    //     else if(current_width_num >= 8'd2 && fifo_feature_dout_valid 
-    //             && (cim_input_cnt == 4'b0 || cim_input_cnt == 4'b1)) begin
-    //         if(cimen == 1'b0)
-    //             cim_input_cnt <= 4'd7;
-    //         else if(cimen == 1'b1)
-    //             cim_input_cnt <= 4'd7;
-    //         cimen <= 1'b1;
-    //     end        
-    //     else begin
-    //         if(cim_input_cnt > 4'd0) begin
-    //             cim_input_cnt <= cim_input_cnt - 1 ;
-    //             cimen <= 1'b1;
-    //         end            
-    //         else begin
-    //             cimen <= 1'b0;
-    //             cim_input_cnt <= 4'b0; 
-    //         end
-    //     end
-    // end
-
-    // always@(*) begin
-    //     for(m = 0; m < 576; m = m + 1) begin
-    //         if(cim_input_cnt >= 0)
-    //             feature_din[m] = feature_reg_group[m][4'd7-cim_input_cnt];  //input from least significant bit
-    //         // else if(cim_input_cnt == 0)
-    //         //     feature_din[m] = feature_reg_group[m][4'd0];
-    //         else 
-    //             feature_din[m] = feature_reg_group[m][4'd0];
-    //     end
-    // end
-
-    // ============================================================
-    // 2. REG for feature
-    // ===========================================================
-    wire  [576-1:0]    feature_din;
+    wire  [64-1:0]     feature_din_64;
+    wire  [512-1:0]    feature_din_512;
     wire               cimen;
-    wire  [9:0]        weight_addr;
+    wire               cimen_512;
+    wire               i_Lane_fea_data_vld;
+    wire  [2:0]        Cluster_to_REG;
+    wire  [2:0]        Group_to_REG;
+    
+    assign i_Lane_fea_data_vld = i_Lane_data_vld && (!i_Is_weight);
+    assign Cluster_to_REG = i_Layer_num == r_Layer_cfg ? i_Cluster_num : 3'd0;
+    assign Group_to_REG   = i_Layer_num == r_Layer_cfg ? i_Group_num : 3'd0;
 
     Group_Ping_Pong_REG u_Group_Ping_Pong_REG (
         .clk(clk),
         .rst_n(rst_n),
+        .r_Feature_Width(r_Feature_Width),
+        .r_Kernel_cfg(r_Kernel_cfg),
+        .r_Stride_cfg(r_Stride_cfg),
+        .r_Net_cfg(r_Net_cfg),
+        .Cluster_to_REG(Cluster_to_REG),
+        .Group_to_REG(Group_to_REG),
         .fifo_feature_dout(fifo_feature_dout),
         .fifo_feature_dout_valid(fifo_feature_dout_valid),
-        .r_Feature_Width(r_Feature_Width),
-        .i_Is_weight(i_Is_weight),
         .i_Lane_data(i_Lane_data),
-        .weight_addr(weight_addr),
-        .feature_din(feature_din),
-        .cimen(cimen)
+        .i_Lane_data_vld(i_Lane_fea_data_vld),
+        .i_input_done_single_fea(i_input_done_single_fea),
+        .feature_din_64(feature_din_64),
+        .feature_din_512(feature_din_512),
+        .cimen(cimen),
+        .cimen_512(cimen_512)
     );
     //============================================================
     // 3. CIM instance
     //============================================================
     wire  [512-1:0]          weight_din;
     wire                     cim_result_ready;
+    reg  [9:0]                weight_addr;
+    // for CNN, it's static matrix multiplication, so weight_addr auto increase when i_Is_weight is high, buf for Transformer, weight_addr should be controlled by external controller
+    always@(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            weight_addr <= 10'd0;
+        end
+        else if(i_Is_weight && weight_addr < 10'd575) begin
+            weight_addr <= weight_addr + 10'd1;
+        end
+        else begin
+            weight_addr <= weight_addr;
+        end
+    end
 
     assign weight_din = i_Is_weight ? i_Lane_data[512-1:0] : 512'b0;
+
     CIM_576X64 u_CIM_576X64 (
         .clk(clk),
         .rst_n(rst_n),
+        .compute_mode({r_Net_cfg, r_Kernel_cfg == 3'd1 ? 1'b0 : 1'b1}), //00:CNN 3x3, 576; 01:CNN 1x1, 64; 11:Transformer, 64+512
         .meb(!en),
         .web(!i_Is_weight),
         .cimen(cimen),
-        .feature_din(feature_din),
+        .cimen_512(cimen_512),
+        .feature_din_64(feature_din_64),
+        .feature_din_512(feature_din_512),
         .weight_din(weight_din),
         .weight_addr(weight_addr),
         .result_data(cim_result),
-        .result_ready(cim_result_ready)
+        .result_ready(cim_result_ready),
+        .result_512(cim_result_512),
+        .result_ready_512( cim_result_ready_512)
     );
 
     //============================================================

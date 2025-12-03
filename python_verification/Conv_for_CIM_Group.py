@@ -14,28 +14,30 @@ np.random.seed(86)
 def rand_int8(shape):
     return np.random.randint(-128, 127+1, size=shape, dtype=np.int8)
 
-IH, IW, IC       = 4, 16, 64
-KH, KW, KC, KN   = 3, 3, 64, 64
-OH, OW          = IH-KH+1, IW-KW+1        # 2, 14
+IH, IW, IC       = 7, 7, 64
+KH, KW, KC, KN   = 1, 1, 64, 64
+STRIDE = 1
+OH = (IH - KH) // STRIDE + 1
+OW = (IW - KW) // STRIDE + 1   
 
-x = rand_int8((IH, IW, IC))          # 4×16×64
+x = rand_int8((IH, IW, IC))          
 
 mask_x = np.zeros((IH, IW, IC), dtype=bool)
-mask_x[:, :, :] = True   # 第一个像素
+mask_x[:, :, 0] = True   # 第一个像素
 #mask[0, 1, :] = True   # 第二个像素
 x = np.where(mask_x, x, 0)
 
 w = rand_int8((KH, KW, KC, KN))      # 3×3×64x64
 mask_w = np.zeros((KH, KW, KC, KN), dtype=bool)
 #mask_w[0, 0, 0, 0] = True   # 第一行第一列第一个通道第一个卷积核
-mask_w[:, :, :, :] = True  
+mask_w[:, :, 0, 0] = True  
 w = np.where(mask_w, w, 0)
 
 # ----------------------------------------------------------
 # 2. 标准 direct 2D convolution (int8 → int32)
 # ----------------------------------------------------------
 
-def conv2d_int8_direct(x, w, stride=1, padding=0):
+def conv2d_int8_direct(x, w, stride=STRIDE, padding=0):
     """
     x: (IH, IW, IC)
     w: (KH, KW, KC, KN)

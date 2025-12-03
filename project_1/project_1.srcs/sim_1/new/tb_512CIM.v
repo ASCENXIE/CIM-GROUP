@@ -74,7 +74,7 @@ always @(posedge clk or negedge rstn) begin
     end
     else begin       
         cnt <= cnt +1'b1;
-        if (cnt > 'd511 && cnt < 'd523) begin
+        if (cnt > 'd511 && cnt < 'd521) begin
             meb <= 1'b0;
             web <= 1'b1;
             cimen <= 1'b1;
@@ -100,6 +100,7 @@ always @(posedge clk or negedge rstn) begin
             web <= 1'b1;
             meb <= 1'b1;
             wgt <= wgt;
+            cimen <= 1'b0;
             feature_din <= feature_din ;
             addr <= addr;
         end

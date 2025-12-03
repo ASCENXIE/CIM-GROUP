@@ -14,7 +14,7 @@ def compare_hex_files(path1, path2):
             if v1 != v2:
                 different_cnt += 1
                 # 如需定位，可取消下行注释
-                # print(f'不同 @ 行 {line_no}: {l1.strip()} != {l2.strip()}')
+                print(f'不同 @ 行 {line_no}: {l1.strip()} != {l2.strip()}')
 
     # 如果两个文件行数不一致，提示剩余行
         if f1.readline() or f2.readline():

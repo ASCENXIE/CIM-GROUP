@@ -33,11 +33,13 @@
 module tb_CIM_Group;
 parameter PERIOD = 4;
 parameter DATA_WIDTH = 512;
-parameter FEATURE_H = 4;
-parameter FEATURE_W = 16;
-parameter OH = FEATURE_H - 3 + 1;  
-parameter OW = FEATURE_W - 3 + 1;
-
+parameter FEATURE_H = 7;
+parameter FEATURE_W = 7;
+parameter STRIDE = 1;
+parameter KH = 1;
+parameter KW = 1;
+parameter OH = (FEATURE_H - KH) / STRIDE + 1;
+parameter OW = (FEATURE_W - KW) / STRIDE + 1;
 integer i;
 integer j;
 integer k;
@@ -66,7 +68,7 @@ wire [64*16-1:0] o_Output_data;
 wire o_Output_vld;
 
 reg [25:0] result_group [0:63][0:FEATURE_W-1][0:FEATURE_H-1]; 
-reg [512-1:0] weight_mem [0:575]; 
+reg [512-1:0] weight_mem [0:KW*KH*64-1]; 
 
 reg [512-1:0] feature_mem [0:FEATURE_H*FEATURE_W-1];
 
@@ -101,7 +103,7 @@ CIM_Group u_CIM_Group (
     .i_Cluster_cfg   (3'd0                      ),
     .i_Group_cfg     (3'd0                      ),
     .i_Layer_cfg     (3'd0                      ),
-    .i_Kernel_cfg    (3'd0                      ),
+    .i_Kernel_cfg    (3'd1                      ),
     .i_Stride_cfg    (2'd0                      ),
     .i_Feature_Width   (i_Feature_width_cfg   ),
     .i_Net_cfg       (1'b0                      ),
@@ -138,7 +140,7 @@ always @(posedge clk or negedge rst_n) begin
     else begin       
         en <= 1'b1;
         // input weight data
-        for(i = 0; i < 576; i = i + 1) begin
+        for(i = 0; i < KW*KH*64; i = i + 1) begin
             i_Lane_data <= weight_mem[i];
             i_Lane_vld <= 1'b1;
             i_Is_weight <= 1'b1;
