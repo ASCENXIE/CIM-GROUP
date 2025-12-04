@@ -117,3 +117,4 @@ data/*.csv
 *.key
 *.pem
 C:\work_file\grade1\GROUP_RTL_CODE\project_1\project_1.runs\synth_1\CIM_576X64.dcp
+*.dcp

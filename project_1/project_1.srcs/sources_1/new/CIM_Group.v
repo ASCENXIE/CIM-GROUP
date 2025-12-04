@@ -196,7 +196,7 @@ module CIM_Group#(
     CIM_576X64 u_CIM_576X64 (
         .clk(clk),
         .rst_n(rst_n),
-        .compute_mode({r_Net_cfg, r_Kernel_cfg == 3'd1 ? 1'b0 : 1'b1}), //00:CNN 3x3, 576; 01:CNN 1x1, 64; 11:Transformer, 64+512
+        .compute_mode({r_Net_cfg, r_Kernel_cfg == 3'd3 ? 1'b0 : 1'b1}), //00:CNN 3x3, 576; 01:CNN 1x1, 64; 11:Transformer, 64+512
         .meb(!en),
         .web(!i_Is_weight),
         .cimen(cimen),
@@ -214,14 +214,17 @@ module CIM_Group#(
     //============================================================
     // 4. Quantization
     //============================================================
-
     Quantization_Group u_Quantization_Group (
         .clk(clk),
         .rst_n(rst_n),
         .cim_result_valid(cim_result_ready),
+        .cim_result_valid_512(cim_result_ready_512),
         .cim_result(cim_result),
+        .cim_result_512(cim_result_512),
         .quant_result(o_Output_data),
-        .quant_result_valid( o_Output_vld)
+        .quant_result_512(o_Output_data_512),
+        .quant_result_valid( o_Output_vld),
+        .quant_result_valid_512( o_Output_vld_512)
     );
 
 endmodule

@@ -58,8 +58,11 @@ module Tile_576X8(
     wire web_512 = sel_512 ? web : 1'b1;
 
     // === Result Wires ===
-    wire [22*8-1:0] result_64;
+    wire [22*8-1:0] result_64_22;
     wire [26*8-1:0] result_576;
+    wire [25*8-1:0] result_512_25;
+    wire [26*8-1:0] result_64;
+
     wire result_ready_64;
     
  CIMD64X64NR #(
@@ -75,7 +78,7 @@ module Tile_576X8(
         .DIN(din_64                     ),
         .A(addr_64                      ),
         .REN(~rst_n                     ),
-        .MAC(result_64                  ),
+        .MAC(result_64_22                  ),
         .SRDY(result_ready_64           )
     );   
 
@@ -88,12 +91,12 @@ u_CIMD512X64NR(
     .CLK   	(clk                       ),
     .MEB   	(meb && compute_mode!=2'b01                       ),    // disable 512 CIM when compute_mode is 01
     .WEB   	(web_512                   ),
-    .CIMEN 	(cimen                     ),
+    .CIMEN 	(cimen                     ),    //
     .NNIN  	(din_512                   ),
     .DIN   	(weight_din                ),
     .A     	(addr_512                  ),
     .REN   	(~rst_n                    ),
-    .MAC   	(result_512                ),
+    .MAC   	(result_512_25                ),
     .SRDY  	(result_ready_512          )
 );
 
@@ -102,11 +105,14 @@ wire signed [25:0] sum_result [7:0];
 genvar i;
 generate
     for (i = 0; i < 8; i = i + 1) begin : SUM_BLOCK
-        wire signed [21:0] r64_ch  = result_64[22*i +: 22];
-        wire signed [24:0] r512_ch = result_512[25*i +: 25];
+        wire signed [21:0] r64_ch  = result_64_22[22*i +: 22];
+        wire signed [24:0] r512_ch = result_512_25[25*i +: 25];
         assign sum_result[i] = {{4{r512_ch[24]}}, r512_ch} + {{7{r64_ch[21]}}, r64_ch};
+        assign result_64[26*i +: 26] = {{4{r64_ch[21]}}, r64_ch};
+        assign result_512[26*i +: 26] = {{4{r512_ch[24]}}, r512_ch};
     end
 endgenerate
+
 
     // === Pack summed outputs ===
     assign result_576 = {

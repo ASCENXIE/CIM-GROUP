@@ -1,19 +1,39 @@
 Vivado Simulator v2021.2
 Copyright 1986-1999, 2001-2021 Xilinx, Inc. All Rights Reserved.
-Running: C:/work_soft/vivado2021/Vivado/2021.2/bin/unwrapped/win64.o/xelab.exe --incr --debug typical --relax --mt 2 -L xil_defaultlib -L unisims_ver -L unimacro_ver -L secureip --snapshot tb_512CIM_behav xil_defaultlib.tb_512CIM xil_defaultlib.glbl -log elaborate.log 
+Running: C:/work_soft/vivado2021/Vivado/2021.2/bin/unwrapped/win64.o/xelab.exe --incr --debug typical --relax --mt 2 -L xil_defaultlib -L unisims_ver -L unimacro_ver -L secureip --snapshot tb_CIM_Group_behav xil_defaultlib.tb_CIM_Group xil_defaultlib.glbl -log elaborate.log 
 Using 2 slave threads.
 Starting static elaboration
 Pass Through NonSizing Optimizer
+WARNING: [VRFC 10-3091] actual bit length 1 differs from formal bit length 3 for port 'o_Cluster_num' [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:126]
+WARNING: [VRFC 10-3091] actual bit length 1 differs from formal bit length 3 for port 'o_Group_num' [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:127]
+WARNING: [VRFC 10-3091] actual bit length 1 differs from formal bit length 3 for port 'o_Layer_num' [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:128]
+WARNING: [VRFC 10-3091] actual bit length 8 differs from formal bit length 6 for port 'feature_width' [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/CIM_Group.v:135]
+WARNING: [VRFC 10-3091] actual bit length 64 differs from formal bit length 512 for port 'feature_din_64' [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/CIM_Group.v:170]
+WARNING: [VRFC 10-3091] actual bit length 512 differs from formal bit length 4096 for port 'feature_din_512' [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sources_1/new/CIM_Group.v:171]
+WARNING: [VRFC 10-5021] port 'i_Lane_data_addr' is not connected on this instance [C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_CIM_Group.v:103]
 Completed static elaboration
 Starting simulation data flow analysis
 Completed simulation data flow analysis
 Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.Syn_FIFO_default
+Compiling module xil_defaultlib.Sliding_Window_FIFO_default
+Compiling module xil_defaultlib.Group_Ping_Pong_REG
+Compiling module xil_defaultlib.cimd_accu(ROW_NUM=64,PSUM_W=10,R...
+Compiling module xil_defaultlib.cimd_colgrp_nr(ROW_NUM=64,PSUM_W...
+Compiling module xil_defaultlib.cimd_accu_nordy(ROW_NUM=64,PSUM_...
+Compiling module xil_defaultlib.cimd_colgrp_nordy_nr(ROW_NUM=64,...
+Compiling module xil_defaultlib.cimd_repair_en_64
+Compiling module xil_defaultlib.CIMD64X64NR_default
 Compiling module xil_defaultlib.cimd_accu_default
 Compiling module xil_defaultlib.cimd_colgrp_nr_default
 Compiling module xil_defaultlib.cimd_accu_nordy_default
 Compiling module xil_defaultlib.cimd_colgrp_nordy_nr_default
 Compiling module xil_defaultlib.cimd_repair_en_512
 Compiling module xil_defaultlib.CIMD512X64NR_default
-Compiling module xil_defaultlib.tb_512CIM
+Compiling module xil_defaultlib.Tile_576X8
+Compiling module xil_defaultlib.CIM_576X64_default
+Compiling module xil_defaultlib.Quantization_Group
+Compiling module xil_defaultlib.CIM_Group
+Compiling module xil_defaultlib.tb_CIM_Group
 Compiling module xil_defaultlib.glbl
-Built simulation snapshot tb_512CIM_behav
+Built simulation snapshot tb_CIM_Group_behav

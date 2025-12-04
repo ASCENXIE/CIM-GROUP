@@ -1,4 +1,0 @@
-Time resolution is 1 ps
-WARNING: Too many words specified in data file C:/work_file/grade1/GROUP_RTL_CODE/python_verification/kernel_weights_512.txt
-WARNING: Too many words specified in data file C:/work_file/grade1/GROUP_RTL_CODE/python_verification/pixel_data_512.txt
-$finish called at time : 60 us : File "C:/work_file/grade1/GROUP_RTL_CODE/project_1/project_1.srcs/sim_1/new/tb_512CIM.v" Line 117

@@ -15,7 +15,7 @@ def rand_int8(shape):
     return np.random.randint(-128, 127+1, size=shape, dtype=np.int8)
 
 IH, IW, IC       = 7, 7, 64
-KH, KW, KC, KN   = 1, 1, 64, 64
+KH, KW, KC, KN   = 3, 3, 64, 64
 STRIDE = 1
 OH = (IH - KH) // STRIDE + 1
 OW = (IW - KW) // STRIDE + 1   
@@ -30,7 +30,7 @@ x = np.where(mask_x, x, 0)
 w = rand_int8((KH, KW, KC, KN))      # 3×3×64x64
 mask_w = np.zeros((KH, KW, KC, KN), dtype=bool)
 #mask_w[0, 0, 0, 0] = True   # 第一行第一列第一个通道第一个卷积核
-mask_w[:, :, 0, 0] = True  
+mask_w[:, :, :, :] = True  
 w = np.where(mask_w, w, 0)
 
 # ----------------------------------------------------------
